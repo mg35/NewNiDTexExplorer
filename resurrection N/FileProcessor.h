@@ -21,19 +21,12 @@ public:
 	void nullifyPixelArray();
 	void setDims(int width, int height, int mode);
 	void flipPaletteMode();
-	void FindPaletteCandidates();
-	int getPrevPalette(int currPalette);
-	int getPalette(int paletteIndex) {
-		return paletteOffsets.at(paletteIndex);
-	}
 	unsigned char* getPaletteArray();
-	int getNextPalette(int currPalette);
 	unsigned char* getPixelArray();
 	
 private:
 	unsigned char* getBMPHeader();
 	std::wstring fileName = L"";
-	std::vector<int> paletteOffsets;
 	unsigned char* RGBpointer = NULL;
 	unsigned char RGBpalette[256][3];
 	int width = 0;

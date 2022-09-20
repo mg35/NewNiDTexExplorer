@@ -269,13 +269,11 @@ void drawGrid(HDC hdc, HWND hWnd, int width, int height, unsigned char* colorArr
     if (moveSliders) {
         SetWindowPos(paletteWarning, HWND_TOP, winWidth - 225, 25, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
         SetWindowPos(paletteEntry, HWND_TOP, winWidth - 225, 50, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
-        SetWindowPos(paletteNextButton, HWND_TOP, winWidth - 200, 200, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
-        SetWindowPos(prevPalette, HWND_TOP, winWidth - 175, 100, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
-        SetWindowPos(nextPalette, HWND_TOP, winWidth - 125, 100, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
+        SetWindowPos(paletteNextButton, HWND_TOP, winWidth - 225, 100, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
         SetWindowPos(paletteMove1, HWND_TOP, winWidth - 100, 25, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
         SetWindowPos(paletteMove4, HWND_TOP, winWidth - 80, 25, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
         SetWindowPos(paletteMove16, HWND_TOP, winWidth - 60, 25, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
-        SetWindowPos(defaultPalette, HWND_TOP, winWidth - 100, 200, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
+        SetWindowPos(defaultPalette, HWND_TOP, winWidth - 100, 100, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
     }
     wchar_t messageString[100];
     swprintf(messageString, 100, L"Width: %d pixels", width);
@@ -285,7 +283,7 @@ void drawGrid(HDC hdc, HWND hWnd, int width, int height, unsigned char* colorArr
 
     int gridSquareSize = 8 * 250 / 10 / sqrt(pow(2.0, (double)mode));
     int gridStartLeft = winWidth - 9 * 250 / 10;
-    int gridStartTop = 300;
+    int gridStartTop = 200;
 
     if (palette != NULL) {
         for (int i = 0; i < sqrt(pow(2.0, (double)mode)); i++) {
@@ -399,12 +397,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         sixteenBit = CreateWindow(
             L"BUTTON", L"16-bit", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
             125, 575, 50, 50, hWnd, (HMENU)WORD_ID, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
-        prevPalette = CreateWindow(
-            L"BUTTON", L"Prev", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-            25, 525, 50, 50, hWnd, (HMENU)PREV_PALETTE_ID, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
-        nextPalette = CreateWindow(
-            L"BUTTON", L"Next", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-            75, 525, 50, 50, hWnd, (HMENU)NEXT_PALETTE_ID, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
         offsetMove1 = CreateWindow(
             UPDOWN_CLASS, L"", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
             150, 375, 25, 50, hWnd, NULL, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
@@ -425,10 +417,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             125, 500, 25, 50, hWnd, NULL, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
         defaultPalette = CreateWindow(
             L"BUTTON", L"Default", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-            75, 525, 50, 50, hWnd, (HMENU)DEFAULT_PALETTE_ID, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+            0, 0, 75, 50, hWnd, (HMENU)DEFAULT_PALETTE_ID, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
         paletteNextButton = CreateWindow(
             L"BUTTON", L"Advance Palette", WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
-            25, 425, 100, 50, hWnd, (HMENU)ADVANCE_PALETTE_ID, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+            0, 0, 125, 50, hWnd, (HMENU)ADVANCE_PALETTE_ID, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
         EndPaint(hWnd, &ps); 
 
     }
@@ -454,11 +446,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     SetWindowTextW(hWnd, titleBar.c_str());
                     fp = new FileProcessor(filePath);
                     wcscpy_s(savePath, filePath);
-                    fp->FindPaletteCandidates();
                     paletteIndex = 0;
                     wchar_t paletteText[9];
                     int paletteTextOffset = 0;
-                    intToHexString(fp->getPalette(paletteIndex), paletteText);
+                    intToHexString(0, paletteText);
                     for (int i = 0; i < 8; i++) {
                         if (paletteText[i] != L'0') {
                             paletteTextOffset = i;
@@ -469,19 +460,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 }
                
             }
-            break;
-            case SAVE_ID:
-            {
-                PWSTR filePath = SaveFile();
-                if (filePath != NULL) {
-                    recalcGrid(fp, mode, width, height, offset, paletteOffset);
-                    if (fp != NULL) {
-                        fp->writeImgFile(filePath);
-                    }
-                    wcscpy_s(savePath, filePath);
-                }
-            }
-            break;
             case LOAD_ID:
             {
                 if (fp != NULL) {
@@ -507,6 +485,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     }
                     recalcGrid(fp, mode, width, height, offset, paletteOffset);
                     InvalidateRect(hWnd, &gridCoords, true);
+                }
+            }
+            break;
+            case SAVE_ID:
+            {
+                PWSTR filePath = SaveFile();
+                if (filePath != NULL) {
+                    recalcGrid(fp, mode, width, height, offset, paletteOffset);
+                    if (fp != NULL) {
+                        fp->writeImgFile(filePath);
+                    }
+                    wcscpy_s(savePath, filePath);
                 }
             }
             break;
@@ -570,9 +560,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 mode = FOUR_BIT;
                 recalcGrid(fp, mode, width, height, offset, paletteOffset);
-                if (fp != NULL) {
-                    fp->FindPaletteCandidates();
-                }
                 InvalidateRect(hWnd, &gridCoords, true);
                 break;
             }
@@ -580,9 +567,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 mode = EIGHT_BIT;
                 recalcGrid(fp, mode, width, height, offset, paletteOffset);
-                if (fp != NULL) {
-                    fp->FindPaletteCandidates();
-                }
                 InvalidateRect(hWnd, &gridCoords, true);
                 break;
             }
@@ -590,55 +574,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 mode = SIXTEEN_BIT;
                 recalcGrid(fp, mode, width, height, offset, paletteOffset);
-                if (fp != NULL) {
-                    //fp->FindPaletteCandidates();
-                }
-                InvalidateRect(hWnd, &gridCoords, true);
-                break;
-            }
-            case PREV_PALETTE_ID:
-            {
-                paletteIndex += 1;
-                wchar_t paletteText[9];
-                int paletteTextOffset = 0;
-                wchar_t messageString[100];
-                GetDlgItemTextW(hWnd, PALETTE_ID, messageString, 100);
-                paletteOffset = fp->getPrevPalette(hexStringToInt(messageString, _tcslen(messageString)));
-                intToHexString(paletteOffset, paletteText);
-                for (int i = 0; i < 8; i++) {
-                    if (paletteText[i] != L'0') {
-                        paletteTextOffset = i;
-                        break;
-                    }
-                }
-                SetDlgItemTextW(hWnd, PALETTE_ID, paletteText + paletteTextOffset);
-                recalcGrid(fp, mode, width, height, offset, paletteOffset);
-                RECT fixText{};
-                GetWindowRect(paletteEntry, &fixText);
-                InvalidateRect(hWnd, &fixText, true);
-                InvalidateRect(hWnd, &gridCoords, true);
-                break;
-            }
-            case NEXT_PALETTE_ID:
-            {
-                paletteIndex += 1;
-                wchar_t paletteText[9];
-                int paletteTextOffset = 0;
-                wchar_t messageString[100];
-                GetDlgItemTextW(hWnd, PALETTE_ID, messageString, 100);
-                paletteOffset = fp->getNextPalette(hexStringToInt(messageString,_tcslen(messageString)));
-                intToHexString(paletteOffset, paletteText);
-                for (int i = 0; i < 8; i++) {
-                    if (paletteText[i] != L'0') {
-                        paletteTextOffset = i;
-                        break;
-                    }
-                }
-                SetDlgItemTextW(hWnd, PALETTE_ID, paletteText + paletteTextOffset);
-                recalcGrid(fp, mode, width, height, offset, paletteOffset);
-                RECT fixText{};
-                GetWindowRect(paletteEntry, &fixText);
-                InvalidateRect(hWnd, &fixText, true);
                 InvalidateRect(hWnd, &gridCoords, true);
                 break;
             }
