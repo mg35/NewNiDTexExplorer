@@ -449,6 +449,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 PWSTR filePath = LoadFile();
                 InvalidateRect(hWnd, NULL, true);
                 if (filePath != NULL) {
+                    std::wstring titleBar = L"NiD Texture Explorer -- ";
+                    titleBar += filePath;
+                    SetWindowTextW(hWnd, titleBar.c_str());
                     fp = new FileProcessor(filePath);
                     wcscpy_s(savePath, filePath);
                     fp->FindPaletteCandidates();
