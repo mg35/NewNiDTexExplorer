@@ -1,0 +1,13 @@
+# ninja log v5
+55	622	6853305078571535	resurrection N/CMakeFiles/target.dir/NiDTextureExplorer.rc.res	8779d47f66e7769d
+2	2167	6853305093950270	resurrection N/CMakeFiles/target.dir/FileProcessor.cpp.obj	33e6dcf38d6092c4
+26	2889	6853305101018371	resurrection N/CMakeFiles/target.dir/NiDTextureExplorer.cpp.obj	e2646d1379bcb46b
+2896	4162	6853305113614537	resurrection N/target.exe	116a984b9e752d26
+6	1010	6853503433862749	resurrection N/CMakeFiles/target.dir/FileProcessor.cpp.obj	33e6dcf38d6092c4
+1	1076	6853503434563930	resurrection N/CMakeFiles/target.dir/NiDTextureExplorer.cpp.obj	e2646d1379bcb46b
+1077	1698	6853503440615185	resurrection N/target.exe	116a984b9e752d26
+6	798	6853522582556964	resurrection N/CMakeFiles/target.dir/FileProcessor.cpp.obj	33e6dcf38d6092c4
+1	1011	6853522584623718	resurrection N/CMakeFiles/target.dir/NiDTextureExplorer.cpp.obj	e2646d1379bcb46b
+1012	1374	6853522588259309	resurrection N/target.exe	116a984b9e752d26
+1	972	6853530897498267	resurrection N/CMakeFiles/target.dir/FileProcessor.cpp.obj	33e6dcf38d6092c4
+973	1559	6853530903200105	resurrection N/target.exe	116a984b9e752d26
