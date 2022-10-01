@@ -36,7 +36,7 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void intToHexString(int value, wchar_t* hexCharArray);
 int hexStringToInt(wchar_t hexStr[], int strlen);
-void recalcGrid(FileProcessor* fp, int mode, int width, int height, int offset, int paletteOffset);
+void recalcGrid(FileProcessor* fp, int mode, int width, int height, int numChunksX, int numChunksY, int offset, int paletteOffset);
 
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -216,9 +216,13 @@ HWND saveButton;
 HWND loadImgButton;
 HWND widthSlider;
 HWND heightSlider;
+HWND tileXSlider;
+HWND tileYSlider;
 HWND fileNameEntry;
 HWND widthText;
 HWND heightText;
+HWND tileXText;
+HWND tileYText;
 HWND offsetEntry;
 HWND paletteEntry;
 HWND offsetWarning;
@@ -249,7 +253,30 @@ RECT getGridCoords(HWND hWnd) {
     return windowDims;
 }
 
-void drawGrid(HDC hdc, HWND hWnd, int width, int height, unsigned char* colorArray, int mode, unsigned char* palette) {
+int getNumChunksX(HWND hWnd, int width) {
+    int padding = 32;
+    int leftPadding = 250;
+    int gridSquareSize = 5;
+    RECT windowDims{ 0,0,0,0 };
+    GetClientRect(hWnd, &windowDims);
+    int winWidth = windowDims.right;
+    int maxWidth = winWidth - padding * 2 - leftPadding * 2;
+    int numChunksX = maxWidth / (width * gridSquareSize);
+    return numChunksX;
+}
+
+int getNumChunksY(HWND hWnd, int height) {
+    int padding = 32;
+    int gridSquareSize = 5;
+    RECT windowDims{ 0,0,0,0 };
+    GetClientRect(hWnd, &windowDims);
+    int winHeight = windowDims.bottom;
+    int maxHeight = winHeight - padding * 2;
+    int numChunksY = maxHeight / (height * gridSquareSize);
+    return numChunksY;
+}
+
+void drawGrid(HDC hdc, HWND hWnd, int width, int height, int numChunksX, int numChunksY, unsigned char* colorArray, int mode, unsigned char* palette) {
     
     double gridRatio = (double)width / (double)height;
     int padding = 32;
@@ -266,6 +293,8 @@ void drawGrid(HDC hdc, HWND hWnd, int width, int height, unsigned char* colorArr
     FillRect(hdc, &toolBar2, fillBrush);
     DeleteObject(fillBrush);
     winRatio = (double)(winWidth - padding * 2 - leftPadding * 2) / (double)(winHeight);
+
+    
     if (moveSliders) {
         SetWindowPos(paletteWarning, HWND_TOP, winWidth - 225, 25, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
         SetWindowPos(paletteEntry, HWND_TOP, winWidth - 225, 50, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
@@ -274,12 +303,29 @@ void drawGrid(HDC hdc, HWND hWnd, int width, int height, unsigned char* colorArr
         SetWindowPos(paletteMove4, HWND_TOP, winWidth - 80, 25, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
         SetWindowPos(paletteMove16, HWND_TOP, winWidth - 60, 25, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
         SetWindowPos(defaultPalette, HWND_TOP, winWidth - 100, 100, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
+        SetWindowPos(tileXSlider, HWND_TOP, winWidth - 225, 450, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
+        SetWindowPos(tileYSlider, HWND_TOP, winWidth - 225, 550, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
+        SetWindowPos(tileXText, HWND_TOP, winWidth - 225, 425, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
+        SetWindowPos(tileYText, HWND_TOP, winWidth - 225, 525, 0, 0, SWP_NOSIZE | SWP_NOREDRAW);
+
     }
+
+    SendMessage(tileXSlider, TBM_SETRANGE,
+        (WPARAM)TRUE,                   // redraw flag 
+        (LPARAM)MAKELONG(1, getNumChunksX(hWnd, width)));
+    SendMessage(tileYSlider, TBM_SETRANGE,
+        (WPARAM)TRUE,                   // redraw flag 
+        (LPARAM)MAKELONG(1, getNumChunksY(hWnd, height)));
+
     wchar_t messageString[100];
     swprintf(messageString, 100, L"Width: %d pixels", width);
     SetWindowText(widthText, messageString);
     swprintf(messageString, 100, L"Height: %d pixels", height);
     SetWindowText(heightText, messageString);
+    swprintf(messageString, 100, L"%d Columns", numChunksX);
+    SetWindowText(tileXText, messageString);
+    swprintf(messageString, 100, L"%d Rows", numChunksY);
+    SetWindowText(tileYText, messageString);
 
     int gridSquareSize = 8 * 250 / 10 / sqrt(pow(2.0, (double)mode));
     int gridStartLeft = winWidth - 9 * 250 / 10;
@@ -303,21 +349,24 @@ void drawGrid(HDC hdc, HWND hWnd, int width, int height, unsigned char* colorArr
     }
 
     if (winRatio > gridRatio) {
-        gridSquareSize = (winHeight - padding * 2) / height;
+        gridSquareSize = 5;//(winHeight - padding * 2) / height;
         gridStartLeft = winWidth / 2 - width * gridSquareSize /2 ;
         gridStartTop = padding;
     }
     else {
-        gridSquareSize = (winWidth - padding * 2 - leftPadding * 2) / width;
+        //(winWidth - padding * 2 - leftPadding * 2) / width
+        gridSquareSize = 5;
         gridStartLeft = padding + leftPadding;
         gridStartTop = winHeight / 2 - height * gridSquareSize / 2;
     }
-    for (int i = 0; i < height; i++) {
+    for (int i = 0; i < height * numChunksY * numChunksX; i++) {
         for (int j = 0; j < width; j++) {
-            RECT newRect{ gridStartLeft + j * gridSquareSize,
-            gridStartTop + i * gridSquareSize,
-            gridStartLeft + (j + 1) * gridSquareSize,
-            gridStartTop + (i + 1) * gridSquareSize };
+            int topSide = ((i * width + j) / (width * height * numChunksX)) * height + i % height;
+            int leftSide = ((i * width + j) % (width * height * numChunksX) / (width * height)) * width + j;
+            RECT newRect{ leftPadding + padding + leftSide * gridSquareSize,
+            padding + topSide * gridSquareSize,
+            leftPadding + padding + (leftSide + 1) * gridSquareSize,
+            padding + (topSide + 1) * gridSquareSize};
             if (colorArray != NULL) {
                 unsigned char* color = (colorArray + (i * width + j) * 3);
                 HBRUSH fillBrush = CreateSolidBrush(RGB(color[2], color[1], color[0]));
@@ -329,6 +378,8 @@ void drawGrid(HDC hdc, HWND hWnd, int width, int height, unsigned char* colorArr
 }
 int width = 16;
 int height = 16;
+int numChunksX = 1;
+int numChunksY = 1;
 int mode = FOUR_BIT;
 bool warnings[] = { SW_HIDE,SW_HIDE };
 int offset = 0;
@@ -344,6 +395,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
     case WM_CREATE: 
     {
+
+        RECT windowDims{ 0,0,0,0 };
+        GetClientRect(hWnd, &windowDims);
+        int winWidth = windowDims.right;
+        numChunksX = getNumChunksX(hWnd, width);
+        numChunksY = getNumChunksY(hWnd, height);
+
         PAINTSTRUCT ps;
         hdc = BeginPaint(hWnd, &ps);
         openButton = CreateWindow(
@@ -367,6 +425,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         SendMessage(heightSlider, TBM_SETRANGE,
             (WPARAM)TRUE,                   // redraw flag 
             (LPARAM)MAKELONG(1, 32));
+        SendMessage(widthSlider, TBM_SETPOS,
+            (WPARAM)TRUE,                   // redraw flag 
+            (LPARAM)4);
+        SendMessage(heightSlider, TBM_SETPOS,
+            (WPARAM)TRUE,                   // redraw flag 
+            (LPARAM)4);
+        tileXSlider = CreateWindowEx(
+            0, TRACKBAR_CLASS, L"Trackbar Control", WS_CHILD | WS_VISIBLE | TBS_AUTOTICKS,
+            winWidth - 225, 450, 200, 30, hWnd, NULL, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+        tileYSlider = CreateWindowEx(
+            0, TRACKBAR_CLASS, L"Trackbar Control", WS_CHILD | WS_VISIBLE | TBS_AUTOTICKS,
+            winWidth - 225, 550, 200, 30, hWnd, NULL, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+        SendMessage(tileXSlider, TBM_SETRANGE,
+            (WPARAM)TRUE,                   // redraw flag 
+            (LPARAM)MAKELONG(1, getNumChunksX(hWnd, width)));
+        SendMessage(tileYSlider, TBM_SETRANGE,
+            (WPARAM)TRUE,                   // redraw flag 
+            (LPARAM)MAKELONG(1, getNumChunksY(hWnd, height)));
+        SendMessage(tileXSlider, TBM_SETPOS,
+            (WPARAM)TRUE,                   // redraw flag 
+            (LPARAM)numChunksX);
+        SendMessage(tileYSlider, TBM_SETPOS,
+            (WPARAM)TRUE,                   // redraw flag 
+            (LPARAM)numChunksY);
         offsetEntry = CreateWindow(
             L"EDIT", L"0", WS_TABSTOP | WS_VISIBLE | WS_CHILD, 25, 400, 120, 20, hWnd, (HMENU)OFFSET_ID,
             (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
@@ -377,6 +459,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             L"STATIC", L"OK", WS_TABSTOP | WS_VISIBLE | WS_CHILD, 25, 175, 150, 20, hWnd,
             NULL, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
         heightText = CreateWindow(
+            L"STATIC", L"OK", WS_TABSTOP | WS_VISIBLE | WS_CHILD, 25, 275, 150, 20, hWnd,
+            NULL, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+        tileXText = CreateWindow(
+            L"STATIC", L"OK", WS_TABSTOP | WS_VISIBLE | WS_CHILD, 25, 175, 150, 20, hWnd,
+            NULL, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+        tileYText = CreateWindow(
             L"STATIC", L"OK", WS_TABSTOP | WS_VISIBLE | WS_CHILD, 25, 275, 150, 20, hWnd,
             NULL, (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
         offsetWarning = CreateWindow(
@@ -483,7 +571,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     else {
                         warnings[1] = SW_NORMAL;
                     }
-                    recalcGrid(fp, mode, width, height, offset, paletteOffset);
                     InvalidateRect(hWnd, &gridCoords, true);
                 }
             }
@@ -492,9 +579,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 PWSTR filePath = SaveFile();
                 if (filePath != NULL) {
-                    recalcGrid(fp, mode, width, height, offset, paletteOffset);
                     if (fp != NULL) {
-                        fp->writeImgFile(filePath);
+                        fp->writeImgFile(filePath, numChunksX, numChunksY);
                     }
                     wcscpy_s(savePath, filePath);
                 }
@@ -503,7 +589,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case ADVANCE_ID:
             {
                 if (fp != NULL) {
-                    offset += width * height * (mode / 8.0);
+                    offset += width * height * numChunksX * numChunksY * (mode / 8.0);
                     wchar_t offsetText[9];
                     int offsetTextOffset = 0;
                     intToHexString(offset, offsetText);
@@ -514,7 +600,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         }
                     }
                     SetDlgItemTextW(hWnd, OFFSET_ID, offsetText + offsetTextOffset);
-                    recalcGrid(fp, mode, width, height, offset, paletteOffset);
                     RECT fixText{};
                     GetWindowRect(offsetEntry, &fixText);
                     InvalidateRect(hWnd, &fixText, true);
@@ -536,7 +621,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         }
                     }
                     SetDlgItemTextW(hWnd, PALETTE_ID, offsetText + offsetTextOffset);
-                    recalcGrid(fp, mode, width, height, offset, paletteOffset);
                     RECT fixText{};
                     GetWindowRect(paletteEntry, &fixText);
                     InvalidateRect(hWnd, &fixText, true);
@@ -548,7 +632,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 if (fp != NULL) {
                     fp->flipPaletteMode();
-                    recalcGrid(fp, mode, width, height, offset, paletteOffset);
                     RECT fixText{};
                     GetWindowRect(paletteEntry, &fixText);
                     InvalidateRect(hWnd, &fixText, true);
@@ -559,21 +642,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             case NIBBLE_ID:
             {
                 mode = FOUR_BIT;
-                recalcGrid(fp, mode, width, height, offset, paletteOffset);
                 InvalidateRect(hWnd, &gridCoords, true);
                 break;
             }
             case BYTE_ID:
             {
                 mode = EIGHT_BIT;
-                recalcGrid(fp, mode, width, height, offset, paletteOffset);
                 InvalidateRect(hWnd, &gridCoords, true);
                 break;
             }
             case WORD_ID:
             {
                 mode = SIXTEEN_BIT;
-                recalcGrid(fp, mode, width, height, offset, paletteOffset);
                 InvalidateRect(hWnd, &gridCoords, true);
                 break;
             }
@@ -632,7 +712,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         }
                         SetDlgItemTextW(hWnd, OFFSET_ID, offsetText + offsetTextOffset);
                     }
-                    recalcGrid(fp, mode, width, height, offset, paletteOffset);
                     RECT fixText{};
                     GetWindowRect(offsetEntry, &fixText);
                     InvalidateRect(hWnd, &fixText, true);
@@ -646,11 +725,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             PAINTSTRUCT ps;
             hdc = BeginPaint(hWnd, &ps);
+            recalcGrid(fp, mode, width, height, numChunksX, numChunksY, offset, paletteOffset);
             unsigned char* palette = NULL;
             if (fp != NULL && mode != SIXTEEN_BIT) {
                 palette = fp->getPaletteArray();
             }
-            drawGrid(hdc, hWnd, width, height, colorArray, mode, palette);
+            drawGrid(hdc, hWnd, width, height, numChunksX, numChunksY, colorArray, mode, palette);
             
             //ShowWindow(offsetWarning, warnings[0]);
             //ShowWindow(paletteWarning, warnings[1]);
@@ -664,58 +744,109 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         int wmId = lParam;
         bool regenPixelArray = false;
         int newVal = HIWORD(wParam);
+        RECT fixText{};
         if ((HWND)lParam == widthSlider) {
             if (LOWORD(wParam) == TB_THUMBPOSITION) {
                 width = newVal * 4;
-                recalcGrid(fp, mode, width, height, offset, paletteOffset);
                 InvalidateRect(hWnd, &gridCoords, true);
             }
             else if (LOWORD(wParam) == SB_LINELEFT) {
                 if (width > 4) {
                     width -= 4;
-                    RECT fixText{};
-                    GetWindowRect(widthText, &fixText);
-                    InvalidateRect(hWnd, &fixText, true);
+                    SendMessage(tileXSlider, TBM_SETRANGE,
+                        (WPARAM)TRUE,
+                        (LPARAM)MAKELONG(1, getNumChunksX(hWnd, width)));
                     InvalidateRect(hWnd, &gridCoords, true);
                 }
             }
             else if (LOWORD(wParam) == SB_LINERIGHT) {
                 if (width < 4*64) {
                     width += 4;
-                    RECT fixText{};
-                    GetWindowRect(widthText, &fixText);
-                    recalcGrid(fp, mode, width, height, offset, paletteOffset);
-                    InvalidateRect(hWnd, &fixText, true);
+                    SendMessage(tileXSlider, TBM_SETRANGE,
+                        (WPARAM)TRUE,
+                        (LPARAM)MAKELONG(1, getNumChunksX(hWnd, width)));
+                    int maxTileCols = getNumChunksX(hWnd, width);
+                    if (numChunksX > maxTileCols) {
+                        numChunksX = maxTileCols;
+                        GetWindowRect(tileXText, &fixText);
+                        InvalidateRect(hWnd, &fixText, true);
+                    }
                     InvalidateRect(hWnd, &gridCoords, true);
                 }
             }
+            GetWindowRect(widthText, &fixText);
+            InvalidateRect(hWnd, &fixText, true);
         }
         if ((HWND)lParam == heightSlider) {
             if (LOWORD(wParam) == TB_THUMBPOSITION ) {
                 height = newVal * 4;
-                recalcGrid(fp, mode, width, height, offset, paletteOffset);
                 InvalidateRect(hWnd, &gridCoords, true);
             }
             else if (LOWORD(wParam) == SB_LINELEFT) {
                 if (height > 4) {
                     height -= 4;
-                    RECT fixText{};
-                    GetWindowRect(heightText, &fixText);
-                    InvalidateRect(hWnd, &fixText, true);
                     InvalidateRect(hWnd, &gridCoords, true);
                 }
             }
             else if (LOWORD(wParam) == SB_LINERIGHT) {
                 if (height < 4 * 32) {
                     height += 4;
-                    RECT fixText{};
-                    GetWindowRect(heightText, &fixText);
-                    recalcGrid(fp, mode, width, height, offset, paletteOffset);
-                    InvalidateRect(hWnd, &fixText, true);
+                    SendMessage(tileYSlider, TBM_SETRANGE,
+                        (WPARAM)TRUE,
+                        (LPARAM)MAKELONG(1, getNumChunksY(hWnd, height)));
+                    int maxTileRows = getNumChunksY(hWnd, height);
+                    if (numChunksY > maxTileRows) {
+                        numChunksY = maxTileRows;
+                        GetWindowRect(tileYText, &fixText);
+                        InvalidateRect(hWnd, &fixText, true);
+                    }
                     InvalidateRect(hWnd, &gridCoords, true);
                 }
             }
+            GetWindowRect(heightText, &fixText);
+            InvalidateRect(hWnd, &fixText, true);
         }
+        if ((HWND)lParam == tileXSlider) {
+            if (LOWORD(wParam) == TB_THUMBPOSITION) {
+                numChunksX = newVal;
+                InvalidateRect(hWnd, &gridCoords, true);
+            }
+            else if (LOWORD(wParam) == SB_LINELEFT) {
+                if (numChunksX > 1) {
+                    numChunksX -= 1;
+                    InvalidateRect(hWnd, &gridCoords, true);
+                }
+            }
+            else if (LOWORD(wParam) == SB_LINERIGHT) {
+                if (numChunksX < getNumChunksX(hWnd, width)) {
+                    numChunksX += 1;
+                    InvalidateRect(hWnd, &gridCoords, true);
+                }
+            }
+            GetWindowRect(tileXText, &fixText);
+            InvalidateRect(hWnd, &fixText, true);
+        }
+        if ((HWND)lParam == tileYSlider) {
+            if (LOWORD(wParam) == TB_THUMBPOSITION) {
+                numChunksY = newVal;
+                InvalidateRect(hWnd, &gridCoords, true);
+            }
+            else if (LOWORD(wParam) == SB_LINELEFT) {
+                if (numChunksY > 1) {
+                    numChunksY -= 1;
+                    InvalidateRect(hWnd, &gridCoords, true);
+                }
+            }
+            else if (LOWORD(wParam) == SB_LINERIGHT) {
+                if (numChunksY < getNumChunksY(hWnd, height)) {
+                    numChunksY += 1;
+                    InvalidateRect(hWnd, &gridCoords, true);
+                }
+            }
+            GetWindowRect(tileYText, &fixText);
+            InvalidateRect(hWnd, &fixText, true);
+        }
+        
         
         break;
     }
@@ -725,9 +856,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_SIZE:
     {
         moveSliders = true;
-        RECT updateRect{ 0,0,200,200 };
+
+        RECT windowDims{ 0,0,0,0 };
+        GetClientRect(hWnd, &windowDims);
+        int winWidth = windowDims.right;
         gridCoords = getGridCoords(hWnd);
-        InvalidateRect(hWnd, &updateRect, true);
+        InvalidateRect(hWnd, &windowDims, true);
     }
         break;
     default:
@@ -756,9 +890,9 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
-void recalcGrid(FileProcessor* fp, int mode, int width, int height, int offset, int paletteOffset) {
+void recalcGrid(FileProcessor* fp, int mode, int width, int height, int numChunksX, int numChunksY, int offset, int paletteOffset) {
     if (fp != NULL) {
-        fp->setDims(width, height, mode);
+        fp->setDims(width*numChunksX, height*numChunksY, mode);
         fp->setupImage(offset, paletteOffset);
         fp->genPixelArray();
         colorArray = fp->getPixelArray();

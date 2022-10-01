@@ -173,7 +173,7 @@ void FileProcessor::loadPalette(int paletteOffset, int paletteSize) {
     }
 }
 
-void FileProcessor::writeImgFile(std::wstring outFileName) {
+void FileProcessor::writeImgFile(std::wstring outFileName, int numChunksX, int numChunksY) {
     int bmpNumBytes = width * height + 0x36;
     unsigned char* bmpNumBytesP = (unsigned char*)&bmpNumBytes;
     unsigned char* heightP = (unsigned char*)&height;
@@ -187,6 +187,24 @@ void FileProcessor::writeImgFile(std::wstring outFileName) {
                                          0x00, 0x00,
                                          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
     std::ofstream imgConverted;
+    int tileWidth = width / numChunksX;
+    int tileHeight = height / numChunksY;
+    int index = 0;
+    unsigned char* tileArray = (unsigned char*)malloc(3 * width * height * numChunksX * numChunksY);
+    printf("%d %d\n", tileWidth * tileHeight * numChunksX * numChunksY, width * height);
+    for (int i = 0; i < tileHeight * numChunksY * numChunksX; i++) {
+        for (int j = 0; j < tileWidth; j++) {
+            int topSide = ((i * tileWidth + j) / (tileWidth * tileHeight * numChunksX)) * tileHeight + i % tileHeight;
+            int leftSide = ((i * tileWidth + j) % (tileWidth * tileHeight * numChunksX) / (tileWidth * tileHeight)) * tileWidth + j;
+            index = ((width * height) - ((topSide * width) + (width - leftSide))) * 3;
+            *(tileArray + index) = *(pixelArray + (i * tileWidth + j) * 3);
+            *(tileArray + index + 1) = *(pixelArray + (i * tileWidth + j) * 3 + 1);
+            *(tileArray + index + 2) = *(pixelArray + (i * tileWidth + j) * 3 + 2);
+        }
+    }
+    free(pixelArray);
+    pixelArray = tileArray;
+    
     imgConverted.open(outFileName, std::ios::binary);
     imgConverted.write((char*)bmpHeader, 0x36);
     imgConverted.write((char*)pixelArray, 3*width*height);

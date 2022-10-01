@@ -14,7 +14,7 @@ public:
 	void loadGameFile4Bit(int offset);
 	void loadGameFile8Bit(int offset);
 	void loadGameFile16Bit(int offset);
-	void writeImgFile(std::wstring outFileName);
+	void writeImgFile(std::wstring outFileName, int numChunksX, int numChunksY);
 	void WidenArray();
 	void loadPalette(int paletteOffset, int paletteSize);
 	void genPixelArray();
