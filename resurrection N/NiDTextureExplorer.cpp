@@ -385,7 +385,7 @@ bool warnings[] = { SW_HIDE,SW_HIDE };
 int offset = 0;
 int paletteOffset = 0;
 int paletteIndex = 0;
-wchar_t savePath[100] = L"";
+wchar_t savePath[10000] = L"";
 unsigned char* colorArray = NULL;
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
